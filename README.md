@@ -4,27 +4,37 @@
 
 ## 📦 What are Infrar Plugins?
 
-Plugins contain the transformation rules that tell the Infrar Engine how to convert provider-agnostic code (using Infrar SDK) into native cloud provider SDK code (boto3, google-cloud-storage, etc.).
+Plugins provide everything needed to deploy applications to cloud providers:
+
+1. **Code Transformation Rules** - Convert Infrar SDK calls to provider-specific SDK code (boto3, google-cloud-storage, etc.)
+2. **OpenTofu Modules** - Infrastructure-as-code templates for provisioning resources
 
 Each plugin defines:
 - **Transformation rules**: How to map Infrar API calls to provider-specific code
 - **Code templates**: Provider-specific code patterns
 - **Parameter mappings**: How to translate parameters between APIs
 - **Dependencies**: Required packages for each provider
+- **OpenTofu modules**: Infrastructure provisioning templates
 
 ## 🗂️ Plugin Structure
 
 ```
 infrar-plugins/
 └── packages/
-    └── {capability}/              # e.g., storage, database, messaging
-        ├── capability.yaml         # Capability definition (future)
+    └── {capability}/              # e.g., storage, compute, secrets
         ├── aws/
-        │   └── rules.yaml         # AWS transformation rules
+        │   ├── rules.yaml         # Code transformation rules
+        │   └── terraform/         # OpenTofu/Terraform module
+        │       ├── main.tf
+        │       ├── variables.tf
+        │       ├── outputs.tf
+        │       └── README.md
         ├── gcp/
-        │   └── rules.yaml         # GCP transformation rules
+        │   ├── rules.yaml
+        │   └── terraform/
         └── azure/
-            └── rules.yaml         # Azure transformation rules (future)
+            ├── rules.yaml
+            └── terraform/         # (planned)
 ```
 
 ## 🚀 Available Plugins
@@ -64,11 +74,49 @@ blob = bucket.blob('backup/file.csv')
 blob.upload_from_filename('file.csv')
 ```
 
+### Compute Plugin ✅ AVAILABLE
+
+**Capability**: Deploy containerized web applications
+
+**Providers**:
+- ✅ **AWS ECS Fargate** - Complete
+- ✅ **GCP Cloud Run** - Complete
+- ⏳ **Azure Container Apps** - Planned
+
+**Features**:
+- Serverless container deployment
+- Application Load Balancer (AWS) / HTTPS endpoints (GCP)
+- Auto-scaling
+- Health checks
+- CloudWatch/Cloud Logging integration
+
+**OpenTofu Modules**:
+- `packages/compute/aws/terraform` - ECS Fargate deployment
+- `packages/compute/gcp/terraform` - Cloud Run deployment
+
+### Secrets Plugin ✅ AVAILABLE
+
+**Capability**: Secure secrets management
+
+**Providers**:
+- ✅ **AWS Secrets Manager** - Complete
+- ✅ **GCP Secret Manager** - Complete
+- ⏳ **Azure Key Vault** - Planned
+
+**Features**:
+- Encrypted storage
+- Version management
+- IAM integration
+- Automatic rotation support
+
+**OpenTofu Modules**:
+- `packages/secrets/aws/terraform` - AWS Secrets Manager
+- `packages/secrets/gcp/terraform` - GCP Secret Manager
+
 ### Future Plugins 🔜
 
 - **Database** - Relational database operations (planned Phase 2)
 - **Messaging** - Queue and pub/sub operations (planned Phase 2)
-- **Compute** - Container deployment (planned Phase 2)
 - **Data Analytics** - Data warehousing and ETL (planned Phase 3)
 
 ## 📝 Transformation Rule Format
@@ -104,6 +152,8 @@ operations:
 
 ## 🔌 Using Plugins
 
+### Code Transformation
+
 Plugins are loaded automatically by the Infrar Engine:
 
 ```go
@@ -118,6 +168,45 @@ Or via CLI:
 
 ```bash
 infrar transform --provider aws --plugins ./infrar-plugins/packages --input app.py
+```
+
+### Infrastructure Provisioning
+
+Use OpenTofu modules to deploy infrastructure:
+
+```hcl
+# Deploy storage bucket on AWS
+module "storage" {
+  source = "./infrar-plugins/packages/storage/aws/terraform"
+
+  bucket_name        = "my-app-data"
+  versioning_enabled = true
+}
+
+# Deploy web application on AWS
+module "web_app" {
+  source = "./infrar-plugins/packages/compute/aws/terraform"
+
+  app_name        = "my-web-app"
+  container_image = "123456789.dkr.ecr.us-east-1.amazonaws.com/my-app:latest"
+  container_port  = 8080
+  cpu             = 512
+  memory          = 1024
+}
+
+# Grant app access to bucket
+resource "aws_iam_role_policy" "app_storage" {
+  role = module.web_app.task_role_arn
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = ["s3:GetObject", "s3:PutObject"]
+      Resource = "${module.storage.bucket_arn}/*"
+    }]
+  })
+}
 ```
 
 ## 🛠️ Creating Custom Plugins
@@ -149,16 +238,17 @@ We welcome community contributions!
 
 ## 📊 Plugin Status
 
-| Capability | AWS | GCP | Azure | Status |
-|------------|-----|-----|-------|--------|
-| **Storage** | ✅ S3 | ✅ Cloud Storage | ⏳ Planned | MVP Ready |
-| **Database** | ⏳ RDS | ⏳ Cloud SQL | ⏳ Planned | Phase 2 |
-| **Messaging** | ⏳ SQS | ⏳ Pub/Sub | ⏳ Planned | Phase 2 |
-| **Compute** | ⏳ ECS | ⏳ Cloud Run | ⏳ Planned | Phase 2 |
+| Capability | AWS | GCP | Azure | Code Transform | OpenTofu Modules | Status |
+|------------|-----|-----|-------|----------------|------------------|--------|
+| **Storage** | S3 | Cloud Storage | Blob (planned) | ✅ | ✅ | **MVP Ready** |
+| **Compute** | ECS Fargate | Cloud Run | Container Apps (planned) | ⏳ | ✅ | **MVP Ready** |
+| **Secrets** | Secrets Manager | Secret Manager | Key Vault (planned) | ⏳ | ✅ | **Phase 2** |
+| **Database** | RDS | Cloud SQL | Azure SQL | ⏳ | ⏳ | Phase 2 |
+| **Messaging** | SQS | Pub/Sub | Service Bus | ⏳ | ⏳ | Phase 2 |
 
 ## 📄 License
 
-Apache License 2.0 - see [LICENSE](LICENSE) file for details.
+GNU General Public License v3.0 - see [LICENSE](LICENSE) file for details.
 
 ## 🔗 Related Repositories
 
