@@ -1,0 +1,318 @@
+variables_ui_metadata:
+  # Metadata about this variable configuration
+  id: gcp-variables-ui
+  version: 1.0.0
+  provider: gcp
+  last_updated: "2024-01-23"
+
+  # Groups organize related variables
+  groups:
+    - id: location
+      title: "Location & Region"
+      description: "Configure where your resources will be deployed"
+      order: 1
+      collapsible: false
+
+    - id: naming
+      title: "Resource Naming"
+      description: "Customize names for your resources"
+      order: 2
+      collapsible: true
+      collapsed_by_default: false
+
+    - id: compute_config
+      title: "Compute Configuration"
+      description: "Configure compute resource limits and scaling"
+      order: 3
+      collapsible: true
+      collapsed_by_default: true
+      visible_when:
+        capability: compute
+
+    - id: advanced
+      title: "Advanced Settings"
+      description: "Additional configuration options"
+      order: 4
+      collapsible: true
+      collapsed_by_default: true
+
+  # Variable definitions
+  variables:
+    - name: region
+      group: location
+      label: "GCP Region"
+      description: "The Google Cloud region where resources will be deployed"
+      type: select
+      required: true
+      default: "us-central1"
+
+      options:
+        - value: "us-central1"
+          label: "US Central (Iowa)"
+          recommended: true
+        - value: "us-east1"
+          label: "US East (South Carolina)"
+        - value: "us-west1"
+          label: "US West (Oregon)"
+        - value: "europe-west1"
+          label: "Europe West (Belgium)"
+        - value: "asia-east1"
+          label: "Asia East (Taiwan)"
+        - value: "asia-southeast1"
+          label: "Asia Southeast (Singapore)"
+
+      help_text: |
+        Choose a region close to your users for better performance.
+        Different regions have different pricing and service availability.
+
+      validation:
+        pattern: "^[a-z]+-[a-z]+\\d+$"
+        error_message: "Must be a valid GCP region identifier"
+
+      documentation_url: "https://cloud.google.com/compute/docs/regions-zones"
+
+    - name: project_id
+      group: location
+      label: "GCP Project ID"
+      description: "Your Google Cloud project identifier"
+      type: text
+      required: false
+      readonly: true
+      auto_populated: true
+      auto_populate_source: "credentials.project_id"
+
+      help_text: |
+        This is automatically extracted from your service account credentials.
+        You cannot change this value.
+
+      validation:
+        pattern: "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+        error_message: "Must be a valid GCP project ID"
+
+    - name: project_name
+      group: naming
+      label: "Project Name"
+      description: "A friendly name for your project"
+      type: text
+      required: true
+
+      placeholder: "my-awesome-project"
+
+      help_text: |
+        This name will be used as a prefix for resource names.
+        Use lowercase letters, numbers, and hyphens only.
+
+      validation:
+        pattern: "^[a-z0-9-]+$"
+        min_length: 3
+        max_length: 30
+        error_message: "Must be 3-30 characters, lowercase letters, numbers, and hyphens only"
+
+    - name: environment
+      group: naming
+      label: "Environment"
+      description: "The deployment environment"
+      type: select
+      required: true
+      default: "production"
+
+      options:
+        - value: "development"
+          label: "Development"
+          description: "For local development and testing"
+        - value: "staging"
+          label: "Staging"
+          description: "Pre-production testing environment"
+        - value: "production"
+          label: "Production"
+          description: "Live production environment"
+          recommended: true
+
+      help_text: |
+        Select the environment type. This affects resource naming and tagging.
+
+    - name: service_name
+      group: naming
+      label: "Service Name"
+      description: "Name for compute services (Cloud Run, Cloud Functions)"
+      type: text
+      required: false
+
+      placeholder: "my-service"
+
+      help_text: |
+        Leave empty to auto-generate based on project name.
+        If specified, must be unique within your GCP project.
+
+      validation:
+        pattern: "^[a-z][a-z0-9-]{0,61}[a-z0-9]$"
+        error_message: "Must be lowercase alphanumeric and hyphens, max 63 characters"
+
+    - name: bucket_name
+      group: naming
+      label: "Storage Bucket Name"
+      description: "Name for Cloud Storage bucket"
+      type: text
+      required: false
+
+      placeholder: "my-project-storage"
+
+      help_text: |
+        Leave empty to auto-generate a unique bucket name.
+        Bucket names must be globally unique across all of GCP.
+
+      validation:
+        pattern: "^[a-z0-9][a-z0-9-_.]{1,61}[a-z0-9]$"
+        error_message: "Must be lowercase alphanumeric with hyphens/underscores, 3-63 characters"
+
+      warning: |
+        ⚠️ Bucket names are globally unique. If the name is already taken,
+        deployment will fail. Consider using auto-generation.
+
+    # Compute capability variables
+    - name: cpu_limit
+      group: compute_config
+      label: "CPU Limit"
+      description: "Maximum CPU allocation per instance"
+      type: select
+      required: false
+      default: "1000m"
+      visible_when:
+        capability: compute
+
+      options:
+        - value: "250m"
+          label: "0.25 vCPU (250m)"
+        - value: "500m"
+          label: "0.5 vCPU (500m)"
+        - value: "1000m"
+          label: "1 vCPU (1000m)"
+          recommended: true
+        - value: "2000m"
+          label: "2 vCPU (2000m)"
+        - value: "4000m"
+          label: "4 vCPU (4000m)"
+
+      help_text: |
+        CPU resources allocated to each compute instance.
+        Higher values increase cost but improve performance.
+
+    - name: memory_limit
+      group: compute_config
+      label: "Memory Limit"
+      description: "Maximum memory allocation per instance"
+      type: select
+      required: false
+      default: "512Mi"
+      visible_when:
+        capability: compute
+
+      options:
+        - value: "256Mi"
+          label: "256 MB"
+        - value: "512Mi"
+          label: "512 MB"
+          recommended: true
+        - value: "1Gi"
+          label: "1 GB"
+        - value: "2Gi"
+          label: "2 GB"
+        - value: "4Gi"
+          label: "4 GB"
+
+      help_text: |
+        Memory allocated to each compute instance.
+        Must be appropriate for your CPU limit.
+
+    - name: min_instances
+      group: compute_config
+      label: "Minimum Instances"
+      description: "Minimum number of instances to keep running"
+      type: number
+      required: false
+      default: 0
+      visible_when:
+        capability: compute
+
+      validation:
+        min: 0
+        max: 100
+        error_message: "Must be between 0 and 100"
+
+      help_text: |
+        Set to 0 to scale to zero when not in use (saves cost).
+        Set to 1+ to keep instances warm (reduces cold start latency).
+
+    - name: max_instances
+      group: compute_config
+      label: "Maximum Instances"
+      description: "Maximum number of instances for auto-scaling"
+      type: number
+      required: false
+      default: 10
+      visible_when:
+        capability: compute
+
+      validation:
+        min: 1
+        max: 1000
+        error_message: "Must be between 1 and 1000"
+
+      help_text: |
+        Upper limit for auto-scaling. Higher values allow more traffic
+        but may increase costs significantly.
+
+    # Advanced variables
+    - name: labels
+      group: advanced
+      label: "Resource Labels"
+      description: "Key-value labels to apply to all resources"
+      type: key_value_map
+      required: false
+
+      default:
+        managed_by: "infrar"
+
+      help_text: |
+        Labels help organize and track your GCP resources.
+        Use for cost allocation, environment identification, etc.
+
+      validation:
+        key_pattern: "^[a-z][a-z0-9_-]{0,62}$"
+        value_pattern: "^[a-z0-9_-]{0,63}$"
+        max_entries: 64
+        error_message: "Labels must follow GCP naming conventions"
+
+  # UI configuration
+  ui_config:
+    # Form layout
+    layout: vertical
+
+    # Show variable preview
+    show_preview: true
+    preview_format: terraform
+
+    # Validation timing
+    validate_on_blur: true
+    validate_on_submit: true
+
+    # Help display
+    show_help_inline: true
+    show_tooltips: true
+
+    # Submit button
+    submit_button_text: "Save Configuration"
+
+  # Help resources
+  resources:
+    - title: "GCP Regions and Zones"
+      url: "https://cloud.google.com/compute/docs/regions-zones"
+      description: "Learn about GCP's global infrastructure"
+
+    - title: "Cloud Run Pricing"
+      url: "https://cloud.google.com/run/pricing"
+      description: "Understand compute resource costs"
+
+    - title: "Resource Labels Best Practices"
+      url: "https://cloud.google.com/resource-manager/docs/creating-managing-labels"
+      description: "How to effectively use labels"

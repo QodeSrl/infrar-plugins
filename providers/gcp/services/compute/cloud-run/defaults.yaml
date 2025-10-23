@@ -1,0 +1,115 @@
+defaults:
+  # Container configuration
+  container_image: "gcr.io/cloudrun/placeholder:latest"  # Placeholder - must be updated
+
+  # Resource limits
+  cpu_limit: "1000m"  # 1 vCPU
+  memory_limit: "512Mi"  # 512 MB
+
+  # Scaling configuration
+  min_instances: 0  # Scale to zero when idle
+  max_instances: 10  # Maximum concurrent instances
+
+  # Timeout
+  timeout: 60  # seconds
+
+  # Service account
+  service_account_email: ""  # Empty = use default compute service account
+
+  # Environment variables
+  environment_variables: {}
+
+  # Region
+  region: "us-central1"
+
+  # Access control
+  allow_unauthenticated: false  # Require authentication by default
+
+  # Naming
+  naming_convention: "${project_name}-service"
+
+  # Labels (GCP equivalent of tags)
+  labels:
+    managed_by: infrar
+    capability: compute
+
+  # Automatic metadata extraction
+  variable_extraction:
+    # Extract project_id from service account JSON
+    - from: credentials.project_id
+      to: project_id
+      required: true
+      method: json_extract
+      json_path: $.project_id
+      description: Extracted from service account JSON file
+
+    # Service name generation
+    - from: project_name
+      to: service_name
+      required: true
+      method: sanitize_gcp_name
+      transformation: lowercase_with_hyphens
+      description: Generated from project name
+
+  # Customizable variables
+  customizable_variables:
+    - name: container_image
+      type: string
+      description: Container image to deploy
+      required: true
+      warning: Must be a valid container image URL
+
+    - name: cpu_limit
+      type: string
+      description: CPU limit per instance
+      default: "1000m"
+      options:
+        - "1000m"  # 1 vCPU
+        - "2000m"  # 2 vCPU
+        - "4000m"  # 4 vCPU
+
+    - name: memory_limit
+      type: string
+      description: Memory limit per instance
+      default: "512Mi"
+      options:
+        - "256Mi"
+        - "512Mi"
+        - "1Gi"
+        - "2Gi"
+        - "4Gi"
+
+    - name: min_instances
+      type: number
+      description: Minimum number of instances (0 = scale to zero)
+      default: 0
+      minimum: 0
+      maximum: 100
+
+    - name: max_instances
+      type: number
+      description: Maximum number of instances
+      default: 10
+      minimum: 1
+      maximum: 1000
+
+    - name: timeout
+      type: number
+      description: Request timeout in seconds
+      default: 60
+      minimum: 1
+      maximum: 3600
+
+    - name: environment_variables
+      type: map
+      description: Environment variables for the container
+      default: {}
+      example:
+        DATABASE_URL: "postgresql://..."
+        API_KEY: "secret-key"
+
+    - name: allow_unauthenticated
+      type: boolean
+      description: Allow public access without authentication
+      default: false
+      warning: Enabling this makes the service publicly accessible

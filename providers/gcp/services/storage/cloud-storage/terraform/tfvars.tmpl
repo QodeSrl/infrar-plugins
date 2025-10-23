@@ -1,0 +1,9 @@
+# Storage service variables
+# Auto-generated from cloud-storage service plugin
+
+bucket_name = {{ .Variables.bucket_name | default (printf "%s-storage" (.ProjectName | sanitize)) | tfstring }}
+location = {{ .Variables.region | default "US" | tfstring }}
+versioning_enabled = false
+force_destroy = true
+cors_rules = []
+lifecycle_rules = []

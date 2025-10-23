@@ -1,0 +1,116 @@
+authentication_method:
+  # Identity
+  id: service-account-json
+  name: service-account-json
+  display_name: Service Account JSON Key
+  provider: gcp
+
+  # Metadata
+  description: Authenticate using a GCP service account JSON key file
+  recommended: true
+  complexity: simple
+  maturity: stable
+
+  # Security classification
+  security:
+    credential_type: long-lived
+    rotation_required: true
+    rotation_period_days: 90
+    risk_level: medium
+    notes: |
+      Service account keys are long-lived credentials that should be rotated regularly.
+      For production workloads on GCP, consider using Workload Identity instead.
+
+  # Where this method works
+  supported_environments:
+    - local_development
+    - ci_cd_pipeline
+    - production
+    - testing
+
+  # Use cases
+  use_cases:
+    - Local development and testing
+    - CI/CD pipelines (GitHub Actions, GitLab CI)
+    - Third-party platform deployment (Infrar, Terraform Cloud)
+    - Cross-cloud deployments (deploying to GCP from AWS/Azure)
+
+  # Prerequisites
+  prerequisites:
+    - GCP project with billing enabled
+    - IAM permissions to create service accounts
+    - IAM permissions to grant roles to service accounts
+
+  # Required GCP permissions for the service account
+  required_permissions:
+    description: The service account needs these roles based on resources being deployed
+    roles:
+      # Always required
+      basic:
+        - roles/iam.serviceAccountUser
+        - roles/serviceusage.serviceUsageConsumer
+
+      # Capability-specific roles
+      storage:
+        - roles/storage.admin
+        - roles/storage.objectAdmin
+
+      compute:
+        - roles/run.admin
+        - roles/cloudfunctions.admin
+        - roles/compute.admin
+
+      database:
+        - roles/cloudsql.admin
+        - roles/datastore.owner
+
+      secrets:
+        - roles/secretmanager.admin
+
+      networking:
+        - roles/compute.networkAdmin
+        - roles/dns.admin
+
+  # Alternatives
+  alternatives:
+    - method: workload-identity
+      display_name: Workload Identity
+      when_to_use: Running on GKE or Cloud Run
+      benefits:
+        - No long-lived credentials
+        - Automatic credential rotation
+        - Better security posture
+      limitations:
+        - Only works within GCP environment
+
+    - method: application-default-credentials
+      display_name: Application Default Credentials
+      when_to_use: Local development only
+      benefits:
+        - Uses gcloud CLI authentication
+        - No credential files to manage
+      limitations:
+        - Not suitable for production
+        - Requires gcloud SDK installed
+
+    - method: oauth
+      display_name: OAuth 2.0
+      when_to_use: User-facing applications
+      benefits:
+        - User-level access control
+        - Temporary tokens
+      limitations:
+        - Complex setup
+        - User consent required
+
+  # Links to documentation
+  documentation:
+    official: https://cloud.google.com/iam/docs/service-accounts
+    create_key: https://cloud.google.com/iam/docs/keys-create-delete
+    best_practices: https://cloud.google.com/iam/docs/best-practices-for-managing-service-account-keys
+    security: https://cloud.google.com/iam/docs/best-practices-service-accounts
+
+  # Version info
+  version: 1.0.0
+  since: 1.0.0
+  deprecated: false

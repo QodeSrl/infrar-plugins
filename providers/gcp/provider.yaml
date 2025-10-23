@@ -1,0 +1,66 @@
+provider:
+  id: gcp
+  name: gcp
+  display_name: Google Cloud Platform
+  description: Cloud computing platform by Google
+  homepage: https://cloud.google.com
+  documentation: https://cloud.google.com/docs
+  logo: gcp-logo.svg
+
+  # Credential configuration
+  credentials:
+    type: file_reference
+    schema: credentials.schema.yaml
+
+  # Region configuration
+  regions:
+    source: regions.yaml
+    default: us-central1
+
+  # Terraform provider configuration
+  terraform:
+    required_version: ">= 1.0"
+    provider_source: hashicorp/google
+    provider_version: "~> 5.0"
+    provider_block: |
+      provider "google" {
+        project = var.project_id
+        region  = var.region
+      }
+
+  # Supported capabilities
+  capabilities:
+    - compute
+    - storage
+    - database
+    - messaging
+    - networking
+    - security
+    - monitoring
+    - ml
+
+  # Naming conventions
+  naming:
+    max_length: 63
+    allowed_chars: "a-z0-9-"
+    case_sensitive: false
+    must_start_with: letter
+
+  # Labels (GCP equivalent of tags)
+  labels:
+    max_count: 64
+    key_max_length: 63
+    value_max_length: 63
+    key_pattern: "^[a-z][a-z0-9_-]*$"
+    value_pattern: "^[a-z0-9_-]*$"
+
+  # Cost estimation
+  pricing:
+    calculator_url: https://cloud.google.com/products/calculator
+    api_available: true
+
+  # Support information
+  support:
+    community: https://www.googlecloudcommunity.com
+    documentation: https://cloud.google.com/docs
+    status_page: https://status.cloud.google.com

@@ -1,0 +1,21 @@
+# Provider-level variables for GCP
+# Auto-generated from GCP provider plugin
+
+# Extract project_id from credentials
+{{- if .Metadata.project_id }}
+project_id = {{ .Metadata.project_id | tfstring }}
+{{- end }}
+
+# Common variables
+project_name = {{ .ProjectName | tfstring }}
+environment  = {{ .Environment | tfstring }}
+region       = {{ .Variables.region | default "us-central1" | tfstring }}
+
+# Labels (GCP uses labels, not tags)
+labels = {
+{{- range $key, $value := .Variables.tags }}
+  {{ $key | sanitizeLabel }} = {{ $value | sanitizeLabel | tfstring }}
+{{- end }}
+  managed_by  = "infrar"
+  environment = {{ .Environment | sanitizeLabel | tfstring }}
+}

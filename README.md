@@ -1,257 +1,328 @@
 # Infrar Plugins
 
-**Transformation rules and cloud provider implementations for the Infrar Infrastructure Intelligence Platform**
+**Modular cloud provider and service implementations for the Infrar Infrastructure Intelligence Platform**
 
-## 📦 What are Infrar Plugins?
+## Overview
 
-Plugins provide everything needed to deploy applications to cloud providers:
+Plugin system providing three-level orchestration architecture for deploying applications to cloud providers. Each provider, category, and service has its own orchestrator that generates Terraform configurations dynamically.
 
-1. **Code Transformation Rules** - Convert Infrar SDK calls to provider-specific SDK code (boto3, google-cloud-storage, etc.)
-2. **OpenTofu Modules** - Infrastructure-as-code templates for provisioning resources
+## Architecture
 
-Each plugin defines:
-- **Transformation rules**: How to map Infrar API calls to provider-specific code
-- **Code templates**: Provider-specific code patterns
-- **Parameter mappings**: How to translate parameters between APIs
-- **Dependencies**: Required packages for each provider
-- **OpenTofu modules**: Infrastructure provisioning templates
+### Three-Level Orchestration
 
-## 🗂️ Plugin Structure
+1. **Service Level** - Individual cloud services (e.g., cloud-run, cloud-storage)
+   - Generates service-specific Terraform resources
+   - Handles service-level configuration and builds
+
+2. **Category Level** - Service categories (e.g., compute, storage)
+   - Combines services within a category
+   - Coordinates service orchestrators
+
+3. **Provider Level** - Cloud providers (e.g., GCP)
+   - Assembles complete provider configuration
+   - Coordinates category orchestrators
+
+## Current Implementation
+
+### Supported Cloud Providers
+
+#### Google Cloud Platform (GCP) ✅
+
+**Compute Services:**
+- **Cloud Run** - Deploy containerized Python applications with automatic scaling
+  - Automatic container building from source code
+  - Integrated Infrar SDK for storage operations
+  - HTTP endpoint with health checks
+  - Auto-scaling 0-10 instances
+
+**Storage Services:**
+- **Cloud Storage** - Object storage with global availability
+  - Bucket creation and management
+  - Versioning and lifecycle rules
+  - CORS configuration support
+  - IAM integration
+
+## Plugin Structure
 
 ```
-infrar-plugins/
-└── packages/
-    └── {capability}/              # e.g., storage, compute, secrets
-        ├── aws/
-        │   ├── rules.yaml         # Code transformation rules
-        │   └── terraform/         # OpenTofu/Terraform module
-        │       ├── main.tf
-        │       ├── variables.tf
-        │       ├── outputs.tf
-        │       └── README.md
-        ├── gcp/
-        │   ├── rules.yaml
-        │   └── terraform/
-        └── azure/
-            ├── rules.yaml
-            └── terraform/         # (planned)
+providers/
+└── gcp/
+    ├── orchestrator/                  # Provider-level orchestration
+    │   ├── main.go
+    │   └── orchestrate                # Binary
+    ├── terraform-config/              # Provider Terraform templates
+    │   ├── provider-block.tf.tmpl
+    │   ├── variables.tf.tmpl
+    │   └── tfvars.tmpl
+    └── services/
+        ├── compute/
+        │   ├── orchestrator/          # Category orchestrator
+        │   │   ├── main.go
+        │   │   └── orchestrate
+        │   └── cloud-run/
+        │       ├── orchestrator/      # Service orchestrator
+        │       │   ├── main.go
+        │       │   └── orchestrate
+        │       ├── terraform/         # Service Terraform templates
+        │       │   ├── main.tf
+        │       │   ├── variables.tf
+        │       │   ├── outputs.tf
+        │       │   └── tfvars.tmpl
+        │       ├── service.yaml       # Service metadata
+        │       └── build.sh           # Container build script
+        └── storage/
+            ├── orchestrator/          # Category orchestrator
+            │   ├── main.go
+            │   └── orchestrate
+            └── cloud-storage/
+                ├── orchestrator/      # Service orchestrator
+                │   ├── main.go
+                │   └── orchestrate
+                ├── terraform/         # Service Terraform templates
+                │   ├── main.tf
+                │   ├── variables.tf
+                │   ├── outputs.tf
+                │   └── tfvars.tmpl
+                └── service.yaml       # Service metadata
 ```
 
-## 🚀 Available Plugins
+## How It Works
 
-### Storage Plugin ✅ AVAILABLE
-
-**Capability**: Object storage operations (upload, download, delete, list)
-
-**Providers**:
-- ✅ **AWS S3** - Complete (4 operations)
-- ✅ **GCP Cloud Storage** - Complete (4 operations)
-- ⏳ **Azure Blob Storage** - Planned
-
-**Operations**:
-1. `upload(bucket, source, destination)` - Upload file to storage
-2. `download(bucket, source, destination)` - Download file from storage
-3. `delete(bucket, path)` - Delete object from storage
-4. `list_objects(bucket, prefix)` - List objects in bucket
-
-**Example Transformation**:
-
+### 1. Code Analysis
+The platform analyzes user code to detect required capabilities:
 ```python
-# Input (Infrar SDK)
-from infrar.storage import upload
-upload(bucket='data', source='file.csv', destination='backup/file.csv')
+import infrar.storage
+infrar.storage.upload(bucket='my-bucket', source='file.txt')
+```
+Detected capabilities: `storage`, `compute` (for execution)
 
-# Output (AWS/boto3)
-import boto3
-s3 = boto3.client('s3')
-s3.upload_file('file.csv', 'data', 'backup/file.csv')
+### 2. Service Recommendation
+Based on capabilities, recommend cloud services:
+- Storage capability → Cloud Storage
+- Compute capability → Cloud Run
 
-# Output (GCP/Cloud Storage)
-from google.cloud import storage
-storage_client = storage.Client()
-bucket = storage_client.bucket('data')
-blob = bucket.blob('backup/file.csv')
-blob.upload_from_filename('file.csv')
+### 3. Orchestrated Terraform Generation
+
+**Provider Orchestrator** (gcp/orchestrator)
+- Receives: capabilities, context, credentials, custom variables
+- Calls: category orchestrators for compute and storage
+- Generates: provider.tf, combines all service resources
+
+**Category Orchestrator** (compute/orchestrator)
+- Receives: compute capabilities
+- Calls: cloud-run service orchestrator
+- Generates: combined category resources
+
+**Service Orchestrator** (cloud-run/orchestrator)
+- Receives: service parameters
+- Generates: main.tf, variables.tf, terraform.tfvars for Cloud Run
+
+### 4. Container Build (Cloud Run only)
+
+**build.sh Script:**
+1. Receives user's Python code via stdin
+2. Creates Infrar SDK (`infrar/storage.py`)
+3. Wraps code in Flask application
+4. Builds Docker container
+5. Authenticates to Google Container Registry
+6. Pushes image to `gcr.io/project-id/app-name:latest`
+7. Returns image URL
+
+### 5. Infrastructure Deployment
+Platform runs terraform:
+```bash
+terraform init
+terraform plan
+terraform apply
 ```
 
-### Compute Plugin ✅ AVAILABLE
+Resources created:
+- Cloud Storage bucket (custom named)
+- Cloud Run service running user's container
+- IAM bindings for access
 
-**Capability**: Deploy containerized web applications
+## Service Interface
 
-**Providers**:
-- ✅ **AWS ECS Fargate** - Complete
-- ✅ **GCP Cloud Run** - Complete
-- ⏳ **Azure Container Apps** - Planned
-
-**Features**:
-- Serverless container deployment
-- Application Load Balancer (AWS) / HTTPS endpoints (GCP)
-- Auto-scaling
-- Health checks
-- CloudWatch/Cloud Logging integration
-
-**OpenTofu Modules**:
-- `packages/compute/aws/terraform` - ECS Fargate deployment
-- `packages/compute/gcp/terraform` - Cloud Run deployment
-
-### Secrets Plugin ✅ AVAILABLE
-
-**Capability**: Secure secrets management
-
-**Providers**:
-- ✅ **AWS Secrets Manager** - Complete
-- ✅ **GCP Secret Manager** - Complete
-- ⏳ **Azure Key Vault** - Planned
-
-**Features**:
-- Encrypted storage
-- Version management
-- IAM integration
-- Automatic rotation support
-
-**OpenTofu Modules**:
-- `packages/secrets/aws/terraform` - AWS Secrets Manager
-- `packages/secrets/gcp/terraform` - GCP Secret Manager
-
-### Future Plugins 🔜
-
-- **Database** - Relational database operations (planned Phase 2)
-- **Messaging** - Queue and pub/sub operations (planned Phase 2)
-- **Data Analytics** - Data warehousing and ETL (planned Phase 3)
-
-## 📝 Transformation Rule Format
-
-Plugins use YAML to define transformation rules:
-
+### service.yaml
 ```yaml
-operations:
-  - name: upload
-    pattern: "infrar.storage.upload"
-    target:
-      provider: aws
-      service: s3
-      operation: upload_file
-
-    transformation:
-      imports:
-        - "import boto3"
-
-      setup_code: "s3 = boto3.client('s3')"
-
-      code_template: "s3.upload_file({{ .source }}, {{ .bucket }}, {{ .destination }})"
-
-      parameter_mapping:
-        bucket: bucket
-        source: source
-        destination: destination
-
-    requirements:
-      - package: boto3
-        version: ">=1.28.0"
+name: cloud-run
+display_name: Cloud Run
+category: compute
+provider: gcp
+capabilities:
+  - compute
+description: Deploy containerized applications with automatic scaling
 ```
 
-## 🔌 Using Plugins
+### Orchestrator Binary (Go)
 
-### Code Transformation
-
-Plugins are loaded automatically by the Infrar Engine:
-
-```go
-// Load storage plugin for AWS
-engine.LoadRules("./infrar-plugins/packages", types.ProviderAWS, "storage")
-
-// Transform code
-result := engine.Transform(sourceCode, types.ProviderAWS)
-```
-
-Or via CLI:
-
-```bash
-infrar transform --provider aws --plugins ./infrar-plugins/packages --input app.py
-```
-
-### Infrastructure Provisioning
-
-Use OpenTofu modules to deploy infrastructure:
-
-```hcl
-# Deploy storage bucket on AWS
-module "storage" {
-  source = "./infrar-plugins/packages/storage/aws/terraform"
-
-  bucket_name        = "my-app-data"
-  versioning_enabled = true
-}
-
-# Deploy web application on AWS
-module "web_app" {
-  source = "./infrar-plugins/packages/compute/aws/terraform"
-
-  app_name        = "my-web-app"
-  container_image = "123456789.dkr.ecr.us-east-1.amazonaws.com/my-app:latest"
-  container_port  = 8080
-  cpu             = 512
-  memory          = 1024
-}
-
-# Grant app access to bucket
-resource "aws_iam_role_policy" "app_storage" {
-  role = module.web_app.task_role_arn
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = ["s3:GetObject", "s3:PutObject"]
-      Resource = "${module.storage.bucket_arn}/*"
-    }]
-  })
+**Input (JSON via stdin):**
+```json
+{
+  "command": "generate",
+  "capabilities": ["compute"],
+  "context": {
+    "project_name": "my-app",
+    "environment": "production",
+    "region": "us-central1"
+  },
+  "credentials": {
+    "gcp_service_account_json": "..."
+  },
+  "parameters": {
+    "service_name": "my-service",
+    "container_image": "gcr.io/project/image:latest"
+  }
 }
 ```
 
-## 🛠️ Creating Custom Plugins
-
-Want to add support for a new provider or capability? Follow these steps:
-
-### 1. Create Plugin Structure
-
-```bash
-mkdir -p packages/{capability}/{provider}
-cd packages/{capability}/{provider}
+**Output (JSON via stdout):**
+```json
+{
+  "success": true,
+  "files": {
+    "main.tf": "...",
+    "variables.tf": "...",
+    "terraform.tfvars": "..."
+  },
+  "metadata": {
+    "services_included": ["cloud-run"],
+    "warnings": [],
+    "required_apis": ["run.googleapis.com"]
+  }
+}
 ```
 
-### 2. Define Transformation Rules
+### build.sh (Optional, for containerization)
 
-Create `rules.yaml` with your transformation rules (see format above)
-
-### 3. Test Your Plugin
-
-```bash
-# Test transformation
-echo "from infrar.capability import operation" | \
-  infrar transform --provider your_provider --plugins ./packages
+**Input (JSON via stdin):**
+```json
+{
+  "project_id": "my-gcp-project",
+  "code": "import infrar.storage\n...",
+  "image_name": "my-app",
+  "credentials": "{\"project_id\": \"...\"}"
+}
 ```
 
-### 4. Submit Pull Request
+**Output (JSON via stdout):**
+```json
+{
+  "success": true,
+  "image": "gcr.io/my-gcp-project/my-app:latest",
+  "message": "Container built and pushed successfully"
+}
+```
 
-We welcome community contributions!
+## Template Functions
 
-## 📊 Plugin Status
+Available in all `.tmpl` files:
 
-| Capability | AWS | GCP | Azure | Code Transform | OpenTofu Modules | Status |
-|------------|-----|-----|-------|----------------|------------------|--------|
-| **Storage** | S3 | Cloud Storage | Blob (planned) | ✅ | ✅ | **MVP Ready** |
-| **Compute** | ECS Fargate | Cloud Run | Container Apps (planned) | ⏳ | ✅ | **MVP Ready** |
-| **Secrets** | Secrets Manager | Secret Manager | Key Vault (planned) | ⏳ | ✅ | **Phase 2** |
-| **Database** | RDS | Cloud SQL | Azure SQL | ⏳ | ⏳ | Phase 2 |
-| **Messaging** | SQS | Pub/Sub | Service Bus | ⏳ | ⏳ | Phase 2 |
+- **`tfstring`** - Quote value for Terraform: `{{ .name | tfstring }}` → `"value"`
+- **`default`** - Provide default: `{{ .var | default "fallback" }}`
+- **`sanitize`** - Lowercase and clean: `{{ .ProjectName | sanitize }}` → `"my-project"`
 
-## 📄 License
+## Development
 
-GNU General Public License v3.0 - see [LICENSE](LICENSE) file for details.
+### Building Orchestrators
 
-## 🔗 Related Repositories
+```bash
+# Provider orchestrator
+cd providers/gcp/orchestrator
+go build -o orchestrate main.go
 
+# Category orchestrators
+cd providers/gcp/services/compute/orchestrator
+go build -o orchestrate main.go
+
+cd providers/gcp/services/storage/orchestrator
+go build -o orchestrate main.go
+
+# Service orchestrators
+cd providers/gcp/services/compute/cloud-run/orchestrator
+go build -o orchestrate main.go
+
+cd providers/gcp/services/storage/cloud-storage/orchestrator
+go build -o orchestrate main.go
+```
+
+### Testing Orchestrator
+
+```bash
+echo '{
+  "command": "generate",
+  "capabilities": ["compute"],
+  "context": {
+    "project_name": "test",
+    "environment": "dev",
+    "region": "us-central1"
+  },
+  "credentials": {},
+  "parameters": {}
+}' | ./providers/gcp/services/compute/cloud-run/orchestrator/orchestrate | jq .
+```
+
+### Testing Build Script
+
+```bash
+echo '{
+  "project_id": "test-project",
+  "code": "import infrar.storage\nprint(\"hello\")",
+  "image_name": "test-app",
+  "credentials": "{}"
+}' | ./providers/gcp/services/compute/cloud-run/build.sh
+```
+
+## Infrar SDK (Included in Containers)
+
+The build script automatically includes the Infrar Python SDK:
+
+**infrar/storage.py:**
+```python
+from google.cloud import storage
+
+def upload(bucket, source, destination=None):
+    """Upload file to Cloud Storage"""
+    if destination is None:
+        destination = os.path.basename(source)
+
+    client = storage.Client()
+    bucket_obj = client.bucket(bucket)
+    blob = bucket_obj.blob(destination)
+    blob.upload_from_filename(source)
+
+    return f"gs://{bucket}/{destination}"
+```
+
+## Roadmap
+
+### Phase 1 (Current - MVP)
+- ✅ GCP provider
+- ✅ Cloud Storage
+- ✅ Cloud Run
+- ✅ Three-level orchestration
+- ✅ Automatic containerization
+- ✅ Custom variable support
+
+### Phase 2 (Planned)
+- AWS provider (Lambda, S3)
+- Azure provider (Container Apps, Blob Storage)
+- Additional GCP services (Cloud Functions, Cloud SQL)
+- Secret management integration
+
+### Phase 3 (Future)
+- Database plugins
+- Messaging plugins
+- Multi-cloud deployments
+- Cost optimization
+
+## License
+
+GNU General Public License v3.0
+
+## Related Repositories
+
+- [infrar-platform](https://github.com/QodeSrl/infrar-platform) - Platform backend
 - [infrar-engine](https://github.com/QodeSrl/infrar-engine) - Transformation engine
 - [infrar-sdk-python](https://github.com/QodeSrl/infrar-sdk-python) - Python SDK
 - [infrar-docs](https://github.com/QodeSrl/infrar-docs) - Documentation

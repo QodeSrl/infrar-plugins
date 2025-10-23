@@ -1,0 +1,31 @@
+provider_defaults:
+  id: gcp-defaults
+  version: 1.0.0
+  provider: gcp
+
+  # Default region
+  default_region: us-central1
+
+  # Default compute configuration
+  compute:
+    runtime: python311
+    memory_size: 512
+    timeout: 30
+    cpu_limit: "1000m"
+    memory_limit: "512Mi"
+    min_instances: 0
+    max_instances: 10
+    allow_public_access: false
+
+  # Default storage configuration
+  storage:
+    location: US
+    versioning_enabled: false
+    force_destroy: false
+
+  # Tag/Label configuration
+  label_format: lowercase_underscore
+  label_key: labels
+
+  # Container registry
+  container_registry: gcr.io/cloudrun/placeholder:latest

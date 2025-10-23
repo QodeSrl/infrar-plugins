@@ -1,0 +1,104 @@
+regions:
+  default: us-central1
+
+  # Available GCP regions
+  available:
+    # US Regions
+    - id: us-central1
+      name: Iowa
+      location: Iowa, USA
+      recommended: true
+      latency_zone: north_america
+      low_co2: true
+
+    - id: us-east1
+      name: South Carolina
+      location: South Carolina, USA
+      latency_zone: north_america
+
+    - id: us-west1
+      name: Oregon
+      location: Oregon, USA
+      recommended: true
+      latency_zone: north_america
+      low_co2: true
+
+    - id: us-west2
+      name: Los Angeles
+      location: California, USA
+      latency_zone: north_america
+
+    # Europe Regions
+    - id: europe-west1
+      name: Belgium
+      location: Belgium
+      recommended: true
+      latency_zone: europe
+      low_co2: true
+
+    - id: europe-west2
+      name: London
+      location: United Kingdom
+      latency_zone: europe
+
+    - id: europe-west3
+      name: Frankfurt
+      location: Germany
+      recommended: true
+      latency_zone: europe
+
+    - id: europe-west4
+      name: Netherlands
+      location: Netherlands
+      latency_zone: europe
+      low_co2: true
+
+    # Asia Pacific Regions
+    - id: asia-southeast1
+      name: Singapore
+      location: Singapore
+      recommended: true
+      latency_zone: asia
+
+    - id: asia-southeast2
+      name: Jakarta
+      location: Indonesia
+      latency_zone: asia
+
+    - id: asia-northeast1
+      name: Tokyo
+      location: Japan
+      recommended: true
+      latency_zone: asia
+
+    - id: asia-south1
+      name: Mumbai
+      location: India
+      latency_zone: asia
+
+  # Multi-region options for storage
+  multi_regions:
+    - id: US
+      name: United States
+      description: Multi-region spanning US locations
+
+    - id: EU
+      name: European Union
+      description: Multi-region spanning EU locations
+
+    - id: ASIA
+      name: Asia
+      description: Multi-region spanning Asia locations
+
+  # Region selection recommendations
+  recommendations:
+    - factor: latency
+      description: Choose region closest to your users
+    - factor: compliance
+      description: EU regions required for GDPR compliance
+    - factor: cost
+      description: Some regions have lower pricing
+    - factor: sustainability
+      description: Regions with low_co2=true use renewable energy
+    - factor: services
+      description: Some newer services may not be available in all regions

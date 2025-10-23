@@ -1,0 +1,108 @@
+credential_schema:
+  # Schema identity
+  id: gcp-service-account-json
+  version: 1.0.0
+
+  # Field definitions
+  fields:
+    - name: gcp_service_account_json
+      type: json_file
+      display_type: file_upload
+      required: true
+      sensitive: true
+
+      # UI metadata
+      label: Service Account JSON Key
+      description: Upload your GCP service account JSON key file
+      placeholder: null
+      help_text: |
+        This file contains your service account credentials. Download it from:
+        GCP Console → IAM & Admin → Service Accounts → Keys → Add Key → Create New Key → JSON
+
+      # Validation rules
+      validation:
+        file_size_max_kb: 10
+        file_extensions:
+          - .json
+        content_type: application/json
+
+        # JSON structure validation
+        json_schema:
+          type: object
+          required_fields:
+            - type
+            - project_id
+            - private_key_id
+            - private_key
+            - client_email
+            - client_id
+            - auth_uri
+            - token_uri
+
+          field_validators:
+            type:
+              equals: "service_account"
+              error_message: "JSON key must be for a service account (type must be 'service_account')"
+
+            project_id:
+              pattern: "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+              error_message: "Invalid GCP project ID format"
+
+            client_email:
+              pattern: "^[a-z0-9-]+@[a-z0-9-]+\\.iam\\.gserviceaccount\\.com$"
+              error_message: "Invalid service account email format"
+
+            private_key:
+              pattern: "^-----BEGIN PRIVATE KEY-----"
+              error_message: "Private key must be in PEM format"
+
+  # Metadata extraction
+  # These values are automatically extracted from the JSON and made available to terraform
+  metadata_extraction:
+    - field: project_id
+      source: gcp_service_account_json
+      method: json_extract
+      json_path: $.project_id
+      description: GCP Project ID (extracted automatically from service account JSON)
+      required: true
+      expose_as_variable: true
+      variable_name: extracted_project_id
+
+    - field: client_email
+      source: gcp_service_account_json
+      method: json_extract
+      json_path: $.client_email
+      description: Service account email address
+      required: true
+      expose_as_variable: true
+      variable_name: service_account_email
+
+    - field: service_account_name
+      source: gcp_service_account_json
+      method: json_extract_transform
+      json_path: $.client_email
+      transform: extract_before_@
+      description: Service account name (without domain)
+      required: false
+      expose_as_variable: true
+      variable_name: service_account_name
+
+  # Security recommendations
+  security:
+    encryption_at_rest: required
+    encryption_in_transit: required
+    audit_logging: required
+
+    warnings:
+      - "⚠️ Service account keys are powerful credentials - treat them like passwords"
+      - "⚠️ Never commit service account keys to source control"
+      - "⚠️ Rotate keys every 90 days maximum"
+      - "⚠️ Use the principle of least privilege when granting roles"
+      - "⚠️ Delete unused keys immediately"
+
+    best_practices:
+      - Use separate service accounts for different environments (dev/staging/prod)
+      - Grant only the minimum required roles
+      - Enable key expiration when possible
+      - Monitor service account usage with Cloud Logging
+      - Use Workload Identity for production workloads running on GCP

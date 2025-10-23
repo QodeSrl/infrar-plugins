@@ -1,0 +1,107 @@
+credential_handler:
+  # Handler identity
+  id: gcp-service-account-json-handler
+  version: 1.0.0
+  method_id: service-account-json
+
+  # Files to create in workspace
+  # These files are created when setting up credentials for terraform execution
+  file_outputs:
+    - name: service_account_key
+      path: "gcp-service-account.json"
+      permissions: "0600"  # Owner read/write only
+      content_source:
+        type: direct
+        field: gcp_service_account_json
+      description: GCP service account JSON key file
+      cleanup_after_use: false  # Keep for debugging; actual cleanup in workspace destroy
+
+  # Environment variables to set for terraform execution
+  environment_variables:
+    - name: GOOGLE_APPLICATION_CREDENTIALS
+      value_template: "{{ .workspace }}/gcp-service-account.json"
+      description: Path to service account JSON key (standard GCP env var)
+      required: true
+
+    - name: GOOGLE_PROJECT
+      value_template: "{{ .metadata.project_id }}"
+      description: GCP project ID (extracted from service account JSON)
+      required: false
+
+    - name: CLOUDSDK_CORE_PROJECT
+      value_template: "{{ .metadata.project_id }}"
+      description: GCP project ID for Cloud SDK commands
+      required: false
+
+  # Validation steps to perform before using credentials
+  validation:
+    enabled: true
+    steps:
+      - name: check_json_validity
+        type: json_parse
+        field: gcp_service_account_json
+        error_message: "Service account JSON is not valid JSON"
+
+      - name: check_required_fields
+        type: json_schema
+        field: gcp_service_account_json
+        schema_ref: schema.yaml
+        error_message: "Service account JSON is missing required fields"
+
+      - name: verify_credentials
+        type: api_call
+        enabled: false  # Disabled by default; can be enabled for stricter validation
+        description: "Call GCP API to verify credentials are valid"
+        command: gcloud auth activate-service-account --key-file={{ .workspace }}/gcp-service-account.json
+        timeout_seconds: 10
+        error_message: "Failed to authenticate with provided service account key"
+
+  # Instructions for troubleshooting
+  troubleshooting:
+    common_errors:
+      - error_pattern: "Error 403: .* does not have .* permission"
+        solution: |
+          The service account doesn't have the required IAM permissions.
+
+          To fix:
+          1. Go to GCP Console → IAM & Admin → IAM
+          2. Find your service account ({{ .metadata.client_email }})
+          3. Click Edit and add the missing role shown in the error message
+          4. Wait 1-2 minutes for permissions to propagate
+          5. Try again
+
+      - error_pattern: "invalid_grant|Invalid JWT"
+        solution: |
+          The service account key may be invalid, expired, or deleted.
+
+          To fix:
+          1. Go to GCP Console → IAM & Admin → Service Accounts
+          2. Find your service account
+          3. Go to Keys tab
+          4. Create a new JSON key
+          5. Upload the new key to Infrar
+
+      - error_pattern: "API .* is not enabled"
+        solution: |
+          Required GCP APIs are not enabled for your project.
+
+          Infrar will attempt to enable APIs automatically. If this fails:
+          1. Go to GCP Console → APIs & Services → Library
+          2. Search for the API mentioned in the error
+          3. Click Enable
+          4. Wait 1-2 minutes for the API to activate
+          5. Try again
+
+  # Cleanup procedures
+  cleanup:
+    on_deployment_destroy:
+      - action: delete_file
+        file: "gcp-service-account.json"
+        description: Remove service account key file from workspace
+
+    on_project_delete:
+      - action: clear_environment_variables
+        variables:
+          - GOOGLE_APPLICATION_CREDENTIALS
+          - GOOGLE_PROJECT
+          - CLOUDSDK_CORE_PROJECT

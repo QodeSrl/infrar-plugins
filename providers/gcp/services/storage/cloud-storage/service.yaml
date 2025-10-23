@@ -1,0 +1,119 @@
+service:
+  # Identity
+  id: cloud-storage
+  name: cloud-storage
+  display_name: Google Cloud Storage
+  capability: storage
+  provider: gcp
+
+  # Description
+  description: Object storage for companies of all sizes. Store any amount of data with high durability and availability.
+  tagline: Unified object storage for developers and enterprises
+  icon: gcp-cloud-storage.svg
+  documentation: https://cloud.google.com/storage/docs
+
+  # Use cases
+  use_cases:
+    - Static website hosting
+    - Data backup and archiving
+    - Content distribution
+    - Data lakes for analytics
+    - Application asset storage
+
+  # Pricing
+  pricing:
+    model: pay-as-you-go
+    unit: GB-months
+    free_tier:
+      storage_gb: 5
+      operations: 5000
+      egress_gb: 1
+    estimate_url: https://cloud.google.com/products/calculator
+
+  # Features
+  features:
+    - Unlimited storage capacity
+    - 11 nines of durability
+    - Global edge caching
+    - Object versioning
+    - Lifecycle management
+    - IAM and ACL controls
+    - Encryption at rest and in transit
+    - Strong consistency
+
+  # Storage classes
+  storage_classes:
+    - id: STANDARD
+      name: Standard Storage
+      description: Best for frequently accessed data
+      min_storage_duration: none
+      retrieval_cost: none
+
+    - id: NEARLINE
+      name: Nearline Storage
+      description: Low-cost storage for infrequently accessed data (once per month)
+      min_storage_duration: 30 days
+      retrieval_cost: yes
+
+    - id: COLDLINE
+      name: Coldline Storage
+      description: Very low-cost storage for infrequently accessed data (once per quarter)
+      min_storage_duration: 90 days
+      retrieval_cost: yes
+
+    - id: ARCHIVE
+      name: Archive Storage
+      description: Lowest-cost storage for long-term archival (once per year)
+      min_storage_duration: 365 days
+      retrieval_cost: yes
+
+  # Limitations
+  limitations:
+    max_object_size: 5TB
+    max_bucket_name_length: 63
+    max_objects_per_bucket: unlimited
+    bucket_name_globally_unique: true
+
+  # Alternatives
+  alternatives:
+    same_provider: []  # No alternative storage service in GCP
+
+    other_providers:
+      - provider: aws
+        service: s3
+        equivalence: 98%
+        notes: Very similar feature set
+
+      - provider: azure
+        service: blob-storage
+        equivalence: 95%
+        notes: Similar but different API
+
+  # Configuration files
+  defaults_file: defaults.yaml
+  terraform_module: terraform/
+  transform_rules: transform/rules.yaml
+
+  # SDK operations supported
+  operations:
+    - upload
+    - download
+    - delete
+    - list_objects
+    - copy
+    - move
+    - get_metadata
+    - set_metadata
+
+  # Provider API Requirements
+  provider_apis:
+    # Bootstrap API - must be enabled first via gcloud CLI
+    - name: cloudresourcemanager.googleapis.com
+      display_name: "Cloud Resource Manager API"
+      description: "Required for managing GCP project resources and enabling other APIs"
+      bootstrap: true
+    # Regular APIs - enabled via terraform
+    - name: storage.googleapis.com
+      display_name: "Cloud Storage API"
+      description: "Required for creating and managing Cloud Storage buckets"
+      bootstrap: false

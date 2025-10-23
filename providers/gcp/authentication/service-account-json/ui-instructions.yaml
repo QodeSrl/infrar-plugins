@@ -1,0 +1,347 @@
+ui_instructions:
+  # Page metadata
+  title: "GCP Credentials Setup"
+  subtitle: "Configure service account authentication for Google Cloud Platform"
+  estimated_time_minutes: 10
+  difficulty: beginner
+
+  # Step-by-step instructions
+  steps:
+    - number: 1
+      title: "Open GCP Console"
+      description: "Navigate to the Google Cloud Console to access your project"
+
+      # Action button
+      action:
+        type: external_link
+        url: "https://console.cloud.google.com"
+        button_text: "Open GCP Console"
+        opens_in_new_tab: true
+
+      # Optional screenshot/image
+      visual_aid:
+        type: screenshot
+        path: "screenshots/gcp/step1-console.png"
+        alt_text: "Google Cloud Console homepage"
+
+      # Additional details (expandable)
+      details: |
+        Make sure you're logged in with an account that has permissions to create
+        service accounts in your target GCP project.
+
+    - number: 2
+      title: "Navigate to Service Accounts"
+      description: "Go to IAM & Admin section to manage service accounts"
+
+      action:
+        type: external_link
+        url: "https://console.cloud.google.com/iam-admin/serviceaccounts"
+        button_text: "Go to Service Accounts"
+        opens_in_new_tab: true
+
+      visual_aid:
+        type: screenshot
+        path: "screenshots/gcp/step2-iam-menu.png"
+        alt_text: "IAM & Admin menu"
+
+      details: |
+        Path: Navigation Menu (☰) → IAM & Admin → Service Accounts
+
+        If you don't see this option, make sure you have the necessary permissions:
+        - Service Account Admin (roles/iam.serviceAccountAdmin)
+        - Project IAM Admin (roles/resourcemanager.projectIamAdmin)
+
+    - number: 3
+      title: "Create Service Account"
+      description: "Create a new service account for Infrar to use"
+
+      action:
+        type: instruction
+        steps:
+          - Click "+ CREATE SERVICE ACCOUNT" at the top
+          - Enter a name (e.g., "infrar-deployer")
+          - Enter a description (e.g., "Service account for Infrar deployments")
+          - Click "CREATE AND CONTINUE"
+
+      visual_aid:
+        type: screenshot
+        path: "screenshots/gcp/step3-create-sa.png"
+        alt_text: "Create service account dialog"
+
+      details: |
+        **Naming best practices:**
+        - Use a descriptive name that indicates its purpose
+        - For multiple environments, create separate service accounts:
+          - infrar-dev
+          - infrar-staging
+          - infrar-prod
+
+    - number: 4
+      title: "Grant Required Permissions"
+      description: "Assign IAM roles based on the resources you'll be deploying"
+
+      action:
+        type: instruction
+        steps:
+          - "In the 'Grant this service account access to project' step"
+          - "Click 'Select a role' dropdown"
+          - "Add the roles needed for your deployment (see below)"
+          - "Click 'CONTINUE'"
+
+      # Dynamic content based on detected capabilities
+      dynamic_content:
+        type: required_roles
+        source: detected_capabilities
+        template: |
+          Based on your project's detected capabilities, you need these roles:
+
+          {{#if capabilities.storage}}
+          **For Storage:**
+          - Cloud Storage Admin (roles/storage.admin)
+          - Storage Object Admin (roles/storage.objectAdmin)
+          {{/if}}
+
+          {{#if capabilities.compute}}
+          **For Compute (Cloud Run/Functions):**
+          - Cloud Run Admin (roles/run.admin)
+          - Cloud Functions Admin (roles/cloudfunctions.admin)
+          - Service Account User (roles/iam.serviceAccountUser)
+          {{/if}}
+
+          {{#if capabilities.database}}
+          **For Database:**
+          - Cloud SQL Admin (roles/cloudsql.admin)
+          - Cloud Datastore Owner (roles/datastore.owner)
+          {{/if}}
+
+          **Always required:**
+          - Service Usage Consumer (roles/serviceusage.serviceUsageConsumer)
+
+      visual_aid:
+        type: screenshot
+        path: "screenshots/gcp/step4-grant-roles.png"
+        alt_text: "Grant service account access"
+
+      warning:
+        type: security
+        message: |
+          ⚠️ **Principle of Least Privilege**
+
+          Only grant the minimum roles required for your deployment.
+          Adding unnecessary roles increases security risk.
+
+      details: |
+        **How to add multiple roles:**
+        1. Click "ADD ANOTHER ROLE"
+        2. Select the role from the dropdown
+        3. Repeat for each required role
+
+        **Tip:** You can always add more roles later if needed.
+
+    - number: 5
+      title: "Skip User Access (Optional)"
+      description: "The 'Grant users access to this service account' step is optional"
+
+      action:
+        type: instruction
+        steps:
+          - "Click 'DONE' (you can skip this step)"
+
+      details: |
+        This step is for granting other users permission to impersonate this service account.
+        It's not needed for Infrar's use case.
+
+    - number: 6
+      title: "Create JSON Key"
+      description: "Generate a JSON key file for authentication"
+
+      action:
+        type: instruction
+        steps:
+          - "Find your service account in the list"
+          - "Click on the service account name"
+          - "Go to the 'KEYS' tab"
+          - "Click 'ADD KEY' → 'Create new key'"
+          - "Select 'JSON' format"
+          - "Click 'CREATE'"
+
+      visual_aid:
+        type: screenshot
+        path: "screenshots/gcp/step6-create-key.png"
+        alt_text: "Create JSON key"
+
+      warning:
+        type: security
+        message: |
+          🔐 **Security Warning**
+
+          The JSON key file that will be downloaded contains credentials that provide
+          full access to your GCP project. Treat it like a password:
+
+          - Never commit it to Git or source control
+          - Don't share it via email or messaging apps
+          - Store it securely (password manager, encrypted storage)
+          - Delete unused keys immediately
+          - Rotate keys every 90 days
+
+      details: |
+        The key file will be automatically downloaded to your computer.
+        It typically has a name like: `project-name-abc123def456.json`
+
+    - number: 7
+      title: "Upload Key to Infrar"
+      description: "Upload the JSON key file you just downloaded"
+
+      action:
+        type: form_field
+        field: gcp_service_account_json
+        description: "Use the file upload field below to select and upload your JSON key"
+
+      warning:
+        type: privacy
+        message: |
+          🔒 **Your credential security:**
+
+          - Credentials are encrypted at rest in our database
+          - Credentials are only used for your deployments
+          - You can delete credentials at any time
+          - We never log or expose credential contents
+
+  # Form fields
+  # These are rendered after the instructions
+  form:
+    title: "Upload Your Credentials"
+    description: "After following the steps above, upload your service account JSON key"
+
+    fields:
+      - name: gcp_service_account_json
+        type: file_upload
+        label: "Service Account JSON Key"
+        required: true
+        accept: ".json"
+
+        # Validation feedback
+        validation_messages:
+          required: "Please upload a service account JSON key file"
+          invalid_format: "File must be a valid JSON file"
+          too_large: "File size must be less than 10KB"
+          invalid_structure: "File doesn't appear to be a valid GCP service account key"
+
+        # Help text
+        help_text: |
+          Select the JSON key file you downloaded from GCP Console.
+          The file typically has a name like: project-name-abc123def456.json
+
+        # Preview/validation display
+        preview:
+          enabled: true
+          show_fields:
+            - label: "Project ID"
+              json_path: $.project_id
+            - label: "Service Account Email"
+              json_path: $.client_email
+            - label: "Key ID"
+              json_path: $.private_key_id
+
+    # Submit button
+    submit:
+      button_text: "Save Credentials"
+      loading_text: "Validating credentials..."
+      success_message: "✅ Credentials saved successfully! Ready to deploy."
+
+  # Additional resources
+  resources:
+    documentation:
+      - title: "GCP Service Account Documentation"
+        url: "https://cloud.google.com/iam/docs/service-accounts"
+        description: "Official Google Cloud documentation on service accounts"
+
+      - title: "Creating and Managing Service Account Keys"
+        url: "https://cloud.google.com/iam/docs/keys-create-delete"
+        description: "Learn how to create, use, and delete service account keys"
+
+      - title: "Service Account Best Practices"
+        url: "https://cloud.google.com/iam/docs/best-practices-for-managing-service-account-keys"
+        description: "Security best practices for service account keys"
+
+    video_tutorials:
+      - title: "How to Create a GCP Service Account"
+        url: "https://www.youtube.com/watch?v=xE0zS8A1kNk"
+        duration_minutes: 5
+        provider: youtube
+
+    troubleshooting:
+      - title: "Permission Denied Errors"
+        url: "/docs/troubleshooting/gcp-permission-denied"
+        description: "How to fix 'does not have permission' errors"
+
+      - title: "Invalid Credentials"
+        url: "/docs/troubleshooting/gcp-invalid-credentials"
+        description: "What to do when credentials fail to validate"
+
+  # FAQ section
+  faq:
+    - question: "Can I use the same service account for multiple projects?"
+      answer: |
+        Yes, but it's not recommended. For better security and organization:
+        - Use separate service accounts for different Infrar projects
+        - Use separate service accounts for different environments (dev/staging/prod)
+        - This limits the blast radius if a key is compromised
+
+    - question: "How often should I rotate service account keys?"
+      answer: |
+        Google recommends rotating service account keys at least every 90 days.
+        Infrar will remind you when keys are approaching expiration.
+
+        To rotate:
+        1. Create a new key (follow steps above)
+        2. Upload the new key to Infrar
+        3. Delete the old key from GCP Console
+        4. Test that deployments still work
+
+    - question: "What if I accidentally commit my key to Git?"
+      answer: |
+        1. **Immediately** delete the key from GCP Console (IAM → Service Accounts → Keys)
+        2. Create a new key
+        3. Update Infrar with the new key
+        4. Use git-filter-branch or BFG Repo-Cleaner to remove the key from Git history
+        5. Force push the cleaned history
+        6. Notify your team to re-clone the repository
+
+    - question: "Can I use Workload Identity instead of service account keys?"
+      answer: |
+        Workload Identity is supported for workloads running within GCP (GKE, Cloud Run).
+        It's more secure as it doesn't require long-lived credentials.
+
+        However, for Infrar's platform (which runs outside your GCP project),
+        service account keys are the appropriate method.
+
+  # Progressive disclosure
+  advanced:
+    title: "Advanced Configuration"
+    sections:
+      - title: "Using Multiple Keys for Rotation"
+        content: |
+          Best practice: Create a second key before deleting the first for zero-downtime rotation.
+
+          1. Create new key while old key is still active
+          2. Upload new key to Infrar
+          3. Test deployment with new key
+          4. Delete old key
+
+      - title: "Custom Role Assignment"
+        content: |
+          Instead of predefined roles, you can create custom roles with exact permissions:
+
+          1. GCP Console → IAM & Admin → Roles
+          2. CREATE ROLE
+          3. Add specific permissions needed
+          4. Grant custom role to service account
+
+      - title: "Organizational Policy Constraints"
+        content: |
+          If your organization has policy constraints that prevent service account key creation:
+
+          1. Contact your GCP organization administrator
+          2. Request an exception for Infrar deployments
+          3. Or, ask if Workload Identity Federation is configured

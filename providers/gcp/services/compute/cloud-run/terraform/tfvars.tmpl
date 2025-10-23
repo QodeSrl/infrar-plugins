@@ -1,0 +1,13 @@
+# Compute service variables (Cloud Run)
+# Auto-generated from cloud-run service plugin
+
+service_name = {{ .Variables.service_name | default (printf "%s-service" (.ProjectName | sanitize)) | tfstring }}
+container_image = {{ .Variables.container_image | default "us-docker.pkg.dev/cloudrun/container/hello" | tfstring }}
+environment_variables = {}
+cpu_limit = "1000m"
+memory_limit = "512Mi"
+service_account_email = ""
+timeout = 60
+min_instances = 0
+max_instances = 10
+allow_public_access = false

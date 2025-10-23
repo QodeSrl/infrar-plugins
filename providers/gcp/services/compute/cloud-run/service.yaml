@@ -1,0 +1,123 @@
+service:
+  # Identity
+  id: cloud-run
+  name: cloud-run
+  display_name: Google Cloud Run
+  capability: compute
+  provider: gcp
+
+  # Description
+  description: Fully managed platform for deploying and scaling containerized applications. Run stateless HTTP containers on a fully managed environment.
+  tagline: Deploy containers without managing servers
+  icon: gcp-cloud-run.svg
+  documentation: https://cloud.google.com/run/docs
+
+  # Use cases
+  use_cases:
+    - HTTP APIs and microservices
+    - Webhooks and event-driven processing
+    - Websites and web applications
+    - Background job processing
+    - Scheduled tasks (with Cloud Scheduler)
+
+  # Pricing
+  pricing:
+    model: pay-per-use
+    unit: vCPU-seconds + GB-seconds
+    free_tier:
+      cpu_hours: 180000
+      memory_gb_hours: 360000
+      requests: 2000000
+    estimate_url: https://cloud.google.com/products/calculator
+
+  # Features
+  features:
+    - Automatic scaling (including scale to zero)
+    - Built-in traffic management
+    - HTTPS endpoints with managed certificates
+    - WebSockets and gRPC support
+    - Environment variables and secrets
+    - Cloud SQL connections
+    - VPC connectivity
+    - Container lifecycle hooks
+
+  # Service tiers
+  service_tiers:
+    - id: first-generation
+      name: Cloud Run (1st gen)
+      description: Based on Knative, for portable workloads
+
+    - id: second-generation
+      name: Cloud Run (2nd gen)
+      description: Direct Cloud Infrastructure integration, better performance
+
+  # Limitations
+  limitations:
+    max_cpu: "8 vCPU"
+    max_memory: "32 GiB"
+    max_request_timeout: "60 minutes"
+    max_container_size: "10 GiB"
+    max_concurrent_requests: 1000
+
+  # Alternatives
+  alternatives:
+    same_provider:
+      - service: cloud-functions
+        equivalence: 85%
+        notes: Simpler but less flexible
+      - service: gke
+        equivalence: 70%
+        notes: More control but more complexity
+
+    other_providers:
+      - provider: aws
+        service: lambda
+        equivalence: 90%
+        notes: Serverless functions, similar capabilities
+
+      - provider: aws
+        service: fargate
+        equivalence: 95%
+        notes: Container platform, very similar
+
+      - provider: azure
+        service: container-apps
+        equivalence: 92%
+        notes: Similar managed container platform
+
+  # Configuration files
+  defaults_file: defaults.yaml
+  terraform_module: terraform/
+  transform_rules: transform/rules.yaml
+
+  # SDK operations supported
+  operations:
+    - deploy
+    - update
+    - delete
+    - get_status
+    - get_logs
+    - get_url
+    - set_environment_variables
+    - scale
+
+  # Provider API Requirements
+  provider_apis:
+    # Bootstrap API - must be enabled first via gcloud CLI
+    - name: cloudresourcemanager.googleapis.com
+      display_name: "Cloud Resource Manager API"
+      description: "Required for managing GCP project resources and enabling other APIs"
+      bootstrap: true
+    # Regular APIs - enabled via terraform
+    - name: iam.googleapis.com
+      display_name: "Identity and Access Management (IAM) API"
+      description: "Required for creating service accounts"
+      bootstrap: false
+    - name: run.googleapis.com
+      display_name: "Cloud Run API"
+      description: "Required for deploying Cloud Run services"
+      bootstrap: false
+    - name: cloudbuild.googleapis.com
+      display_name: "Cloud Build API"
+      description: "Required for building container images"
+      bootstrap: false

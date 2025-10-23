@@ -1,0 +1,117 @@
+defaults:
+  # Geographic defaults
+  location: US  # Multi-region
+  region: us-central1  # Single-region default
+
+  # Storage configuration
+  storage_class: STANDARD
+  versioning_enabled: false
+  force_destroy: false  # Prevent accidental deletion
+
+  # Access control
+  uniform_bucket_level_access: true  # Recommended for security
+  public_access_prevention: enforced
+
+  # Naming
+  naming_convention: "${project_name}-${capability}"
+  # Example: "frameflows-storage"
+
+  # Labels (GCP equivalent of tags)
+  labels:
+    managed_by: infrar
+    capability: storage
+
+  # CORS configuration (empty by default)
+  cors_rules: []
+
+  # Lifecycle rules (empty by default)
+  lifecycle_rules: []
+
+  # Encryption
+  encryption:
+    default_kms_key_name: null  # Use Google-managed encryption by default
+
+  # Logging
+  logging:
+    enabled: false
+    log_bucket: null
+    log_object_prefix: null
+
+  # Website configuration
+  website:
+    main_page_suffix: null
+    not_found_page: null
+
+  # Automatic metadata extraction
+  # These values are extracted from credentials or user input
+  variable_extraction:
+    # Extract project_id from service account JSON
+    - from: credentials.project_id
+      to: project_id
+      required: true
+      method: json_extract
+      json_path: $.project_id
+      description: Extracted from service account JSON file
+
+    # Bucket name generation
+    - from: project_name
+      to: bucket_name
+      required: true
+      method: sanitize_gcp_name
+      transformation: lowercase_with_hyphens
+      description: Generated from project name
+
+  # Variable overrides
+  # These can be customized by users
+  customizable_variables:
+    - name: location
+      type: string
+      description: Geographic location (US, EU, ASIA) or specific region
+      options:
+        - US
+        - EU
+        - ASIA
+        - us-central1
+        - europe-west1
+        - asia-southeast1
+      default: US
+
+    - name: storage_class
+      type: string
+      description: Storage class for the bucket
+      options:
+        - STANDARD
+        - NEARLINE
+        - COLDLINE
+        - ARCHIVE
+      default: STANDARD
+
+    - name: versioning_enabled
+      type: boolean
+      description: Enable object versioning
+      default: false
+
+    - name: force_destroy
+      type: boolean
+      description: Allow bucket deletion even if not empty (USE WITH CAUTION)
+      default: false
+      warning: Enabling this allows permanent data loss
+
+    - name: cors_rules
+      type: array
+      description: CORS configuration for web access
+      default: []
+      example:
+        - allowed_origins: ["https://example.com"]
+          allowed_methods: ["GET", "POST"]
+          expose_headers: ["Content-Length"]
+          max_age_seconds: 3600
+
+    - name: lifecycle_rules
+      type: array
+      description: Lifecycle management rules
+      default: []
+      example:
+        - action_type: Delete
+          age_days: 365
+          with_state: ARCHIVED
