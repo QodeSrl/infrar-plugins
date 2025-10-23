@@ -20,7 +20,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "[BUILD] Building Cloud Run container for $IMAGE_NAME"
+echo "[BUILD] Building Cloud Run container for $IMAGE_NAME" >&2
 
 # Create infrar SDK
 mkdir -p "$BUILD_DIR/infrar"
@@ -131,16 +131,16 @@ EOF
 
 # Build image
 IMAGE_TAG="gcr.io/$PROJECT_ID/$IMAGE_NAME:latest"
-echo "[BUILD] Building image: $IMAGE_TAG"
-docker build -t "$IMAGE_TAG" "$BUILD_DIR" 2>&1
+echo "[BUILD] Building image: $IMAGE_TAG" >&2
+docker build -t "$IMAGE_TAG" "$BUILD_DIR" >&2
 
 # Authenticate Docker to GCR
-echo "[BUILD] Authenticating to GCR"
-echo "$CREDENTIALS" | docker login -u _json_key --password-stdin gcr.io 2>&1
+echo "[BUILD] Authenticating to GCR" >&2
+echo "$CREDENTIALS" | docker login -u _json_key --password-stdin gcr.io >&2
 
 # Push image
-echo "[BUILD] Pushing image to GCR"
-docker push "$IMAGE_TAG" 2>&1
+echo "[BUILD] Pushing image to GCR" >&2
+docker push "$IMAGE_TAG" >&2
 
 # Output success
 cat << EOF
